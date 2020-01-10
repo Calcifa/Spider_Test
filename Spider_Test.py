@@ -40,23 +40,18 @@ def save_file(dir,filename,content):
 def get_chapter_url(list_url, base_url, queue):
     # 获取页面信息
     response = requests.get(url = list_url, headers = headers)
-    #print(response.text)
     # 获取请求状态码
     code = response.status_code
     if code == 200:
         html = et.HTML(response.content)
         # 获取该小说章节list
-        #print(html)
         chapter_url = html.xpath('//*[@id="list"]/dl/dd/a/@href')[9:75]
-        #print(chapter_url)
         k = 1
         for i in chapter_url:
             #组装小说章节url
             page_url = base_url + i
-            #print(page_url)
             #将小说章节url+章节编号入队
             queue_element = page_url, str(k)
-            #print(queue_element)
             queue.put(queue_element)
             k = k + 1
 
@@ -70,10 +65,8 @@ def get_detail_html(queue):
         queue.task_done()
         # 获取章节url
         page_url = queue_element[0]
-        #print(page_url)
         # 获取章节编号
         chapter_num = queue_element[1]
-        #print(chapter_num)
         headers = {
             # 从代理列表随机获取代理
             'User-Agent': random.choice(USER_AGENT_LIST)
@@ -86,18 +79,16 @@ def get_detail_html(queue):
             html = et.HTML(response.content)
             # 获取该章小说title
             title = html.xpath('//h1/text()')[0]
-            #print(title)
+            title = chapter_num + title
             # 获取该章小说内容
             r = html.xpath('//*[@id="content"]/text()')
-            #print(r)
             content = ''
             for i in r:
                 ## 正则匹配，去除干扰字符，只保留汉字和数字
                 #data = re.sub('[\u4e00-\u9fa5]\u0030-\u0039', "", i)
                 content = content + i
-            #print(content)
             # 去除两端空格
-            title = title.strip()
+            #title = title.strip()
             #content = content.strip()
             #保存文件
             save_file(save_dir, title, content)
@@ -110,10 +101,10 @@ if __name__ == "__main__":
     # 小说章节基地址
     base_url = 'https://www.biqugecom.com'
     # 小说章节列表页地址
-    list_url = 'https://www.biqugecom.com/0/15/'
+    list_url = 'https://www.biqugecom.com/20/20500/'
     #文件保存目录,自由设置，开心就好
     path = os.getcwd()
-    save_dir = path + '\\全职法师\\'
+    save_dir = path + '\\斗破苍穹\\'
     #save_dir = os.path.abspath('../全职法师/')
 
     # 用Queue构造一个先进先出队列
