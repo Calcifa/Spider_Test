@@ -1,6 +1,6 @@
 import queue
 import requests
-from lxml import etree as et
+from lxml import etree
 import re
 import random
 import time
@@ -67,11 +67,11 @@ def get_chapter_url(list_url, base_url, queue):
         # 获取请求状态码
         code = response.status_code
         if code == 200:
-                html = et.HTML(response.content)
+                html = etree.HTML(response.content)
                 # 获取该小说章节list
                 id_num = start_chapter +8
                 current_chapter = start_chapter
-                chapter_url = html.xpath('//*[@id="list"]/dl/dd/a/@href')[id_num:40]
+                chapter_url = html.xpath('//*[@id="list"]/dl/dd/a/@href')[id_num:]
                 for i in chapter_url:
                         #组装小说章节url
                         page_url = base_url + i
@@ -102,7 +102,7 @@ def get_detail_html(queue):
                 # 请求状态码
                 code = response.status_code
                 if code == 200:
-                        html = et.HTML(response.content)
+                        html = etree.HTML(response.content)
                         # 获取该章小说title
                         title = chapter_num + html.xpath('//h1/text()')[0]
                         # 获取该章小说内容
