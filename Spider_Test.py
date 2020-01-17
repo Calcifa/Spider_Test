@@ -6,6 +6,7 @@ import random
 import time
 import os
 import pymysql
+from bs4 import BeautifulSoup
 
 
 #用户代理列表
@@ -23,6 +24,34 @@ USER_AGENT_LIST = [
         'Mozilla/4.77 [en] (X11; I; IRIX;64 6.5 IP30)',
         'Mozilla/4.8 [en] (X11; U; SunOS; 5.7 sun4u)'
 ]
+
+#IP池
+def get_ip_list(url):
+        headers = {
+                # 从代理列表随机获取代理
+                'User-Agent': random.choice(USER_AGENT_LIST)
+        }
+        web_data = requests.get(url = url, headers = headers)
+        soup = BeautifulSoup(web_data.text, 'html')
+        ips = soup.find_all('tr')
+        ip_list = []
+        for i in range(1, len(ips)):
+                ip_info = ips[i]
+                tds = ip_info.find_all('td')
+                ip_list.append(tds[1].text + ':' + tds[2].text)
+        #检测ip可用性
+        while True:
+                try:
+                        ip = random.choice(ip_list)
+                        proxy_host = "https://" + ip
+                        proxy_temp = {"https": proxy_host}
+                        response = requests.get(url = base_url, headers = headers, proxies=proxy_temp)
+                        break
+                except Exception as e:
+                        print('Error: '+ str(e))
+                        continue
+        return proxy_temp
+
 
 #检查已下载章节
 def check_chapter():
@@ -79,16 +108,18 @@ def get_chapter_url(list_url, base_url, queue):
                         queue_element = page_url, str(current_chapter)
                         queue.put(queue_element)
                         current_chapter = current_chapter + 1
+        else:
+                print(code)
 
 #获取章节内容，存入数据库
 def get_detail_html(queue):
         while not queue.empty():
                 #休息一下，太快会503.等待时长可根据实际情况调节，你可以在503的边缘疯狂试探
-                time_num = 5
-                time.sleep(time_num)
+                #time_num = 5
+                #time.sleep(time_num)
                 # Queue队列的get方法用于从队列中提取元素
                 queue_element = queue.get()
-                queue.task_done()
+                #queue.task_done()
                 # 获取章节url
                 page_url = queue_element[0]
                 # 获取章节编号
@@ -97,8 +128,12 @@ def get_detail_html(queue):
                         # 从代理列表随机获取代理
                         'User-Agent': random.choice(USER_AGENT_LIST)
                 }
-                response = requests.get(url = page_url, headers = headers)
-                response.encoding = "utf-8"
+                #proxies = {
+                #        'https': random.choice()
+                #}
+                proxies = get_ip_list(ip_url)
+                response = requests.get(url = page_url, headers = headers, proxies = proxies)
+                #response.encoding = "utf-8"
                 # 请求状态码
                 code = response.status_code
                 if code == 200:
@@ -112,9 +147,9 @@ def get_detail_html(queue):
                                 content = content + i
                         #插入数据库
                         insert_data(chapter_num, title, content)
+                        print(title)
                 else:
                         print(code)
-                print(title)
 
 # 主函数
 if __name__ == "__main__":
@@ -129,11 +164,16 @@ if __name__ == "__main__":
         base_url = 'https://www.biqugecom.com'
         # 小说章节列表页地址
         list_url = 'https://www.biqugecom.com/0/15/'
+        # ip地址url
+        ip_url = 'http://www.xicidaili.com/wt/'
 
         # 用Queue构造一个先进先出队列
         urls_queue = queue.Queue()
         #检查已下载章节
         check_chapter()
+        #获取ip代理列表
+        #ip_list = get_ip_list(ip_url)
+        #proxies = get_random_ip(ip_list)
         #获取章节url列表
         get_chapter_url(list_url, base_url, urls_queue)
         #获取章节内容，存入数据库
